@@ -1,9 +1,11 @@
 package com.worldbattles.worldmonster.entity;
 
 import com.worldbattles.worldmonster.registry.ModSounds;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
@@ -19,6 +21,7 @@ import net.minecraft.world.entity.ai.goal.RandomStrollGoal;
 import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
 import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import software.bernie.geckolib.animatable.GeoEntity;
 import software.bernie.geckolib.core.animatable.instance.AnimatableInstanceCache;
@@ -31,7 +34,6 @@ public class WorldMonsterEntity extends Monster implements GeoEntity {
     private static final EntityDataAccessor<Integer> ATTACK_ANIMATION_TICKS =
             SynchedEntityData.defineId(WorldMonsterEntity.class, EntityDataSerializers.INT);
     private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
-
     private static final RawAnimation IDLE = RawAnimation.begin().thenLoop("animation.worldmonster.idle");
     private static final RawAnimation WALK = RawAnimation.begin().thenLoop("animation.worldmonster.walking");
     private static final RawAnimation RUN = RawAnimation.begin().thenLoop("animation.worldmonster.running");
@@ -43,23 +45,18 @@ public class WorldMonsterEntity extends Monster implements GeoEntity {
     }
 
     public static AttributeSupplier.Builder createAttributes() {
-        return Monster.createMonsterAttributes()
-                .add(Attributes.MAX_HEALTH, 120.0D)
-                .add(Attributes.MOVEMENT_SPEED, 0.315D)
-                .add(Attributes.ATTACK_DAMAGE, 9.0D)
-                .add(Attributes.ARMOR, 4.0D)
-                .add(Attributes.KNOCKBACK_RESISTANCE, 0.55D)
+        return Monster.createMonsterAttributes().add(Attributes.MAX_HEALTH, 120.0D)
+                .add(Attributes.MOVEMENT_SPEED, 0.315D).add(Attributes.ATTACK_DAMAGE, 9.0D)
+                .add(Attributes.ARMOR, 4.0D).add(Attributes.KNOCKBACK_RESISTANCE, 0.55D)
                 .add(Attributes.FOLLOW_RANGE, 32.0D);
     }
 
-    @Override
-    protected void defineSynchedData() {
+    @Override protected void defineSynchedData() {
         super.defineSynchedData();
         this.entityData.define(ATTACK_ANIMATION_TICKS, 0);
     }
 
-    @Override
-    protected void registerGoals() {
+    @Override protected void registerGoals() {
         this.goalSelector.addGoal(0, new FloatGoal(this));
         this.goalSelector.addGoal(2, new MeleeAttackGoal(this, 1.28D, false));
         this.goalSelector.addGoal(5, new RandomStrollGoal(this, 0.85D));
@@ -68,16 +65,17 @@ public class WorldMonsterEntity extends Monster implements GeoEntity {
         this.targetSelector.addGoal(1, new NearestAttackableTargetGoal<>(this, Player.class, true));
     }
 
-    @Override
-    public void tick() {
+    @Override public void tick() {
         super.tick();
-        if (!this.level().isClientSide && this.entityData.get(ATTACK_ANIMATION_TICKS) > 0) {
-            this.entityData.set(ATTACK_ANIMATION_TICKS, this.entityData.get(ATTACK_ANIMATION_TICKS) - 1);
+        if (!this.level().isClientSide) {
+            if (this.entityData.get(ATTACK_ANIMATION_TICKS) > 0)
+                this.entityData.set(ATTACK_ANIMATION_TICKS, this.entityData.get(ATTACK_ANIMATION_TICKS) - 1);
+            if (this.isAlive() && this.random.nextInt(900) == 0)
+                this.playSound(ModSounds.CRACKLING.get(), 0.75F, 0.88F + this.random.nextFloat() * 0.24F);
         }
     }
 
-    @Override
-    public boolean doHurtTarget(Entity target) {
+    @Override public boolean doHurtTarget(Entity target) {
         boolean hit = super.doHurtTarget(target);
         if (hit && !this.level().isClientSide) {
             this.entityData.set(ATTACK_ANIMATION_TICKS, 15);
@@ -88,19 +86,15 @@ public class WorldMonsterEntity extends Monster implements GeoEntity {
         return hit;
     }
 
-    public boolean isPlayingAttackAnimation() {
-        return this.entityData.get(ATTACK_ANIMATION_TICKS) > 0;
-    }
+    public boolean isPlayingAttackAnimation() { return this.entityData.get(ATTACK_ANIMATION_TICKS) > 0; }
 
-    @Override
-    protected SoundEvent getAmbientSound() {
+    @Override protected SoundEvent getAmbientSound() {
         return this.random.nextInt(4) == 0
                 ? (this.random.nextBoolean() ? ModSounds.GROWL_1.get() : ModSounds.GROWL_2.get())
                 : ModSounds.BREATHING.get();
     }
 
-    @Override
-    protected SoundEvent getHurtSound(DamageSource source) {
+    @Override protected SoundEvent getHurtSound(DamageSource source) {
         return switch (this.random.nextInt(4)) {
             case 0 -> ModSounds.HURT_1.get();
             case 1 -> ModSounds.HURT_2.get();
@@ -109,29 +103,36 @@ public class WorldMonsterEntity extends Monster implements GeoEntity {
         };
     }
 
-    @Override
-    public MobType getMobType() {
-        return MobType.UNDEAD;
+    @Override protected SoundEvent getDeathSound() { return ModSounds.GROWL_3.get(); }
+
+    @Override public void die(DamageSource source) {
+        super.die(source);
+        if (!this.level().isClientSide && this.level() instanceof ServerLevel server) {
+            server.sendParticles(ParticleTypes.SOUL, getX(), getY() + getBbHeight() * 0.5D, getZ(),
+                    28, 0.55D, 0.65D, 0.55D, 0.035D);
+            server.sendParticles(ParticleTypes.LARGE_SMOKE, getX(), getY() + 0.4D, getZ(),
+                    18, 0.45D, 0.35D, 0.45D, 0.02D);
+        }
     }
 
-    @Override
-    public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
+    @Override protected void dropCustomDeathLoot(DamageSource source, int looting, boolean recentlyHit) {
+        super.dropCustomDeathLoot(source, looting, recentlyHit);
+        this.spawnAtLocation(Items.SPIDER_EYE, 1 + this.random.nextInt(3));
+        if (this.random.nextFloat() < 0.35F) this.spawnAtLocation(Items.GOLDEN_APPLE);
+    }
+
+    @Override public MobType getMobType() { return MobType.UNDEAD; }
+
+    @Override public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
         controllers.add(new AnimationController<>(this, "main", 3, state -> {
-            if (this.isPlayingAttackAnimation()) {
-                return state.setAndContinue(ATTACK);
-            }
-            if (this.getTarget() != null && this.getNavigation().isInProgress()) {
+            if (isPlayingAttackAnimation()) return state.setAndContinue(ATTACK);
+            if (getTarget() != null && getNavigation().isInProgress()
+                    && getDeltaMovement().horizontalDistanceSqr() > 0.0004D)
                 return state.setAndContinue(RUN);
-            }
-            if (state.isMoving()) {
-                return state.setAndContinue(WALK);
-            }
+            if (state.isMoving()) return state.setAndContinue(WALK);
             return state.setAndContinue(IDLE);
         }));
     }
 
-    @Override
-    public AnimatableInstanceCache getAnimatableInstanceCache() {
-        return this.cache;
-    }
+    @Override public AnimatableInstanceCache getAnimatableInstanceCache() { return this.cache; }
 }
