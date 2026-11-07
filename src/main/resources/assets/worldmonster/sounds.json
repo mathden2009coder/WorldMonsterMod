@@ -1,0 +1,5 @@
+{
+  "entity.worldmonster.hurt_1": {"sounds":[{"name":"worldmonster:monster/hurt_1","stream":false}]},
+  "entity.worldmonster.hurt_2": {"sounds":[{"name":"worldmonster:monster/hurt_2","stream":false}]},
+  "entity.worldmonster.hurt_3": {"sounds":[{"name":"worldmonster:monster/hurt_3","stream":false}]}
+}
