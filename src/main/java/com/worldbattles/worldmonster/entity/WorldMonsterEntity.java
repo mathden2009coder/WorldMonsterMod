@@ -5,7 +5,6 @@ import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.sounds.SoundEvent;
-import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
@@ -82,6 +81,9 @@ public class WorldMonsterEntity extends Monster implements GeoEntity {
         boolean hit = super.doHurtTarget(target);
         if (hit && !this.level().isClientSide) {
             this.entityData.set(ATTACK_ANIMATION_TICKS, 15);
+            this.playSound(this.random.nextBoolean() ? ModSounds.ATTACK_1.get() : ModSounds.ATTACK_2.get(),
+                    1.0F, 0.92F + this.random.nextFloat() * 0.16F);
+            this.playSound(ModSounds.IMPACT.get(), 0.9F, 0.9F + this.random.nextFloat() * 0.2F);
         }
         return hit;
     }
@@ -91,17 +93,20 @@ public class WorldMonsterEntity extends Monster implements GeoEntity {
     }
 
     @Override
-    protected SoundEvent getHurtSound(DamageSource source) {
-        return switch (this.random.nextInt(3)) {
-            case 0 -> ModSounds.HURT_1.get();
-            case 1 -> ModSounds.HURT_2.get();
-            default -> ModSounds.HURT_3.get();
-        };
+    protected SoundEvent getAmbientSound() {
+        return this.random.nextInt(4) == 0
+                ? (this.random.nextBoolean() ? ModSounds.GROWL_1.get() : ModSounds.GROWL_2.get())
+                : ModSounds.BREATHING.get();
     }
 
     @Override
-    protected SoundEvent getDeathSound() {
-        return SoundEvents.RAVAGER_DEATH;
+    protected SoundEvent getHurtSound(DamageSource source) {
+        return switch (this.random.nextInt(4)) {
+            case 0 -> ModSounds.HURT_1.get();
+            case 1 -> ModSounds.HURT_2.get();
+            case 2 -> ModSounds.HURT_3.get();
+            default -> ModSounds.CRY.get();
+        };
     }
 
     @Override
@@ -115,7 +120,6 @@ public class WorldMonsterEntity extends Monster implements GeoEntity {
             if (this.isPlayingAttackAnimation()) {
                 return state.setAndContinue(ATTACK);
             }
-            // RUN only while the monster is actively moving to pursue a target.
             if (this.getTarget() != null && this.getNavigation().isInProgress()) {
                 return state.setAndContinue(RUN);
             }
