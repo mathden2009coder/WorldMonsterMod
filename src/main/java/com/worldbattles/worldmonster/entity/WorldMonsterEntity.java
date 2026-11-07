@@ -92,7 +92,7 @@ public class WorldMonsterEntity extends Monster implements GeoEntity {
             this.entityData.set(ATTACK_ANIMATION_TICKS, 15);
             this.playSound(this.random.nextBoolean() ? ModSounds.ATTACK_1.get() : ModSounds.ATTACK_2.get(),
                     1.0F, 0.92F + this.random.nextFloat() * 0.16F);
-            this.playSound(ModSounds.IMPACT.get(), 0.9F, 0.9F + this.random.nextFloat() * 0.2F);
+            // Removed IMPACT: this was the extra heavy thud heard on every successful hit.
         }
         return hit;
     }
