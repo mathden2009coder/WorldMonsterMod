@@ -10,6 +10,7 @@ import net.minecraft.sounds.SoundEvent;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.MobType;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
@@ -31,11 +32,14 @@ import software.bernie.geckolib.core.animation.RawAnimation;
 import software.bernie.geckolib.util.GeckoLibUtil;
 
 public class WorldMonsterEntity extends Monster implements GeoEntity {
+    private static final int ATTACK_WINDUP_TICKS = 9;
     private static final EntityDataAccessor<Integer> ATTACK_ANIMATION_TICKS =
             SynchedEntityData.defineId(WorldMonsterEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Boolean> CHASING =
             SynchedEntityData.defineId(WorldMonsterEntity.class, EntityDataSerializers.BOOLEAN);
     private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
+    private LivingEntity pendingAttackTarget;
+    private int pendingAttackTicks;
     private static final RawAnimation IDLE = RawAnimation.begin().thenLoop("animation.worldmonster.idle");
     private static final RawAnimation WALK = RawAnimation.begin().thenLoop("animation.worldmonster.walking");
     private static final RawAnimation RUN = RawAnimation.begin().thenLoop("animation.worldmonster.running");
@@ -61,7 +65,7 @@ public class WorldMonsterEntity extends Monster implements GeoEntity {
 
     @Override protected void registerGoals() {
         this.goalSelector.addGoal(0, new FloatGoal(this));
-        this.goalSelector.addGoal(2, new WorldMonsterMeleeAttackGoal(this, 1.28D, false));
+        this.goalSelector.addGoal(2, new MeleeAttackGoal(this, 1.28D, false));
         this.goalSelector.addGoal(5, new RandomStrollGoal(this, 0.85D));
         this.goalSelector.addGoal(6, new LookAtPlayerGoal(this, Player.class, 18.0F));
         this.goalSelector.addGoal(7, new RandomLookAroundGoal(this));
@@ -74,30 +78,52 @@ public class WorldMonsterEntity extends Monster implements GeoEntity {
             if (this.entityData.get(ATTACK_ANIMATION_TICKS) > 0)
                 this.entityData.set(ATTACK_ANIMATION_TICKS, this.entityData.get(ATTACK_ANIMATION_TICKS) - 1);
 
+            if (this.pendingAttackTicks > 0) {
+                this.pendingAttackTicks--;
+                if (this.pendingAttackTicks == 0) {
+                    LivingEntity victim = this.pendingAttackTarget;
+                    this.pendingAttackTarget = null;
+                    if (victim != null && victim.isAlive() && this.isWithinMeleeReach(victim))
+                        super.doHurtTarget(victim);
+                }
+            }
+
             boolean chasing = this.getTarget() != null
                     && this.getTarget().isAlive()
                     && this.distanceToSqr(this.getTarget()) > 3.5D
                     && this.getNavigation().isInProgress();
             this.entityData.set(CHASING, chasing);
 
-            // More frequent random ambient crackles; played server-side so nearby players hear them.
             if (this.isAlive() && this.random.nextInt(240) == 0)
                 this.playSound(ModSounds.CRACKLING.get(), 0.9F, 0.9F + this.random.nextFloat() * 0.2F);
         }
     }
 
-    /** Starts the attack animation and sound; the melee goal applies damage at the visual impact frame. */
+    private boolean isWithinMeleeReach(LivingEntity victim) {
+        double reach = this.getBbWidth() * 2.0D;
+        return this.distanceToSqr(victim) <= reach * reach + victim.getBbWidth();
+    }
+
+    /** Vanilla melee goal calls this at the start of its attack; damage is applied at the animation's impact frame. */
+    @Override public boolean doHurtTarget(Entity target) {
+        if (this.level().isClientSide || !(target instanceof LivingEntity victim))
+            return false;
+        if (this.pendingAttackTicks > 0)
+            return false;
+
+        this.startAttackAnimation();
+        this.pendingAttackTarget = victim;
+        this.pendingAttackTicks = ATTACK_WINDUP_TICKS;
+        return true;
+    }
+
+    /** Starts the attack animation and sound immediately, before the delayed damage. */
     public void startAttackAnimation() {
         if (!this.level().isClientSide) {
             this.entityData.set(ATTACK_ANIMATION_TICKS, 15);
-            // Attack sound deliberately stays at the beginning of the animation.
             this.playSound(this.random.nextBoolean() ? ModSounds.ATTACK_1.get() : ModSounds.ATTACK_2.get(),
                     1.0F, 0.92F + this.random.nextFloat() * 0.16F);
         }
-    }
-
-    @Override public boolean doHurtTarget(Entity target) {
-        return super.doHurtTarget(target);
     }
 
     public boolean isPlayingAttackAnimation() { return this.entityData.get(ATTACK_ANIMATION_TICKS) > 0; }
