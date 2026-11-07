@@ -1,5 +1,52 @@
 {
-  "entity.worldmonster.hurt_1": {"sounds":[{"name":"worldmonster:monster/hurt_1","stream":false}]},
-  "entity.worldmonster.hurt_2": {"sounds":[{"name":"worldmonster:monster/hurt_2","stream":false}]},
-  "entity.worldmonster.hurt_3": {"sounds":[{"name":"worldmonster:monster/hurt_3","stream":false}]}
+  "entity.worldmonster.hurt_1": {
+    "sounds": [
+      "worldmonster:monster/hurt_1"
+    ]
+  },
+  "entity.worldmonster.hurt_2": {
+    "sounds": [
+      "worldmonster:monster/hurt_2"
+    ]
+  },
+  "entity.worldmonster.hurt_3": {
+    "sounds": [
+      "worldmonster:monster/hurt_3"
+    ]
+  },
+  "entity.worldmonster.cry": {
+    "sounds": [
+      "worldmonster:monster/cry"
+    ]
+  },
+  "entity.worldmonster.attack_1": {
+    "sounds": [
+      "worldmonster:monster/attack_1"
+    ]
+  },
+  "entity.worldmonster.attack_2": {
+    "sounds": [
+      "worldmonster:monster/attack_2"
+    ]
+  },
+  "entity.worldmonster.impact": {
+    "sounds": [
+      "worldmonster:monster/impact"
+    ]
+  },
+  "entity.worldmonster.growl_1": {
+    "sounds": [
+      "worldmonster:monster/growl_1"
+    ]
+  },
+  "entity.worldmonster.growl_2": {
+    "sounds": [
+      "worldmonster:monster/growl_2"
+    ]
+  },
+  "entity.worldmonster.breathing": {
+    "sounds": [
+      "worldmonster:monster/breathing"
+    ]
+  }
 }
