@@ -18,7 +18,7 @@ import software.bernie.geckolib.core.object.PlayState;
 import software.bernie.geckolib.util.GeckoLibUtil;
 public class WorldMonsterEntity extends Monster implements GeoEntity {
  private static final EntityDataAccessor<Integer> ATTACK_TICKS=SynchedEntityData.defineId(WorldMonsterEntity.class,EntityDataSerializers.INT);
- private final AnimatableInstanceCache cache=GeckolibUtil.createInstanceCache(this);
+ private final AnimatableInstanceCache cache=GeckoLibUtil.createInstanceCache(this);
  private static final RawAnimation IDLE=RawAnimation.begin().thenLoop("animation.worldmonster.idle");
  private static final RawAnimation WALK=RawAnimation.begin().thenLoop("animation.worldmonster.walking");
  private static final RawAnimation RUN=RawAnimation.begin().thenLoop("animation.worldmonster.running");
