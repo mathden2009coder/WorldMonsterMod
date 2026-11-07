@@ -33,6 +33,8 @@ import software.bernie.geckolib.util.GeckoLibUtil;
 public class WorldMonsterEntity extends Monster implements GeoEntity {
     private static final EntityDataAccessor<Integer> ATTACK_ANIMATION_TICKS =
             SynchedEntityData.defineId(WorldMonsterEntity.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Boolean> CHASING =
+            SynchedEntityData.defineId(WorldMonsterEntity.class, EntityDataSerializers.BOOLEAN);
     private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
     private static final RawAnimation IDLE = RawAnimation.begin().thenLoop("animation.worldmonster.idle");
     private static final RawAnimation WALK = RawAnimation.begin().thenLoop("animation.worldmonster.walking");
@@ -54,6 +56,7 @@ public class WorldMonsterEntity extends Monster implements GeoEntity {
     @Override protected void defineSynchedData() {
         super.defineSynchedData();
         this.entityData.define(ATTACK_ANIMATION_TICKS, 0);
+        this.entityData.define(CHASING, false);
     }
 
     @Override protected void registerGoals() {
@@ -70,8 +73,16 @@ public class WorldMonsterEntity extends Monster implements GeoEntity {
         if (!this.level().isClientSide) {
             if (this.entityData.get(ATTACK_ANIMATION_TICKS) > 0)
                 this.entityData.set(ATTACK_ANIMATION_TICKS, this.entityData.get(ATTACK_ANIMATION_TICKS) - 1);
-            if (this.isAlive() && this.random.nextInt(900) == 0)
-                this.playSound(ModSounds.CRACKLING.get(), 0.75F, 0.88F + this.random.nextFloat() * 0.24F);
+
+            boolean chasing = this.getTarget() != null
+                    && this.getTarget().isAlive()
+                    && this.distanceToSqr(this.getTarget()) > 3.5D
+                    && this.getNavigation().isInProgress();
+            this.entityData.set(CHASING, chasing);
+
+            // More frequent random ambient crackles; played server-side so nearby players hear them.
+            if (this.isAlive() && this.random.nextInt(240) == 0)
+                this.playSound(ModSounds.CRACKLING.get(), 0.9F, 0.9F + this.random.nextFloat() * 0.2F);
         }
     }
 
@@ -87,6 +98,7 @@ public class WorldMonsterEntity extends Monster implements GeoEntity {
     }
 
     public boolean isPlayingAttackAnimation() { return this.entityData.get(ATTACK_ANIMATION_TICKS) > 0; }
+    public boolean isChasing() { return this.entityData.get(CHASING); }
 
     @Override protected SoundEvent getAmbientSound() {
         return this.random.nextInt(4) == 0
@@ -95,11 +107,10 @@ public class WorldMonsterEntity extends Monster implements GeoEntity {
     }
 
     @Override protected SoundEvent getHurtSound(DamageSource source) {
-        return switch (this.random.nextInt(4)) {
+        return switch (this.random.nextInt(3)) {
             case 0 -> ModSounds.HURT_1.get();
             case 1 -> ModSounds.HURT_2.get();
-            case 2 -> ModSounds.HURT_3.get();
-            default -> ModSounds.CRY.get();
+            default -> ModSounds.HURT_3.get();
         };
     }
 
@@ -126,9 +137,7 @@ public class WorldMonsterEntity extends Monster implements GeoEntity {
     @Override public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
         controllers.add(new AnimationController<>(this, "main", 3, state -> {
             if (isPlayingAttackAnimation()) return state.setAndContinue(ATTACK);
-            if (getTarget() != null && getNavigation().isInProgress()
-                    && getDeltaMovement().horizontalDistanceSqr() > 0.0004D)
-                return state.setAndContinue(RUN);
+            if (isChasing()) return state.setAndContinue(RUN);
             if (state.isMoving()) return state.setAndContinue(WALK);
             return state.setAndContinue(IDLE);
         }));
