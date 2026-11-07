@@ -61,7 +61,7 @@ public class WorldMonsterEntity extends Monster implements GeoEntity {
 
     @Override protected void registerGoals() {
         this.goalSelector.addGoal(0, new FloatGoal(this));
-        this.goalSelector.addGoal(2, new MeleeAttackGoal(this, 1.28D, false));
+        this.goalSelector.addGoal(2, new WorldMonsterMeleeAttackGoal(this, 1.28D, false));
         this.goalSelector.addGoal(5, new RandomStrollGoal(this, 0.85D));
         this.goalSelector.addGoal(6, new LookAtPlayerGoal(this, Player.class, 18.0F));
         this.goalSelector.addGoal(7, new RandomLookAroundGoal(this));
@@ -86,15 +86,18 @@ public class WorldMonsterEntity extends Monster implements GeoEntity {
         }
     }
 
-    @Override public boolean doHurtTarget(Entity target) {
-        boolean hit = super.doHurtTarget(target);
-        if (hit && !this.level().isClientSide) {
+    /** Starts the attack animation and sound; the melee goal applies damage at the visual impact frame. */
+    public void startAttackAnimation() {
+        if (!this.level().isClientSide) {
             this.entityData.set(ATTACK_ANIMATION_TICKS, 15);
+            // Attack sound deliberately stays at the beginning of the animation.
             this.playSound(this.random.nextBoolean() ? ModSounds.ATTACK_1.get() : ModSounds.ATTACK_2.get(),
                     1.0F, 0.92F + this.random.nextFloat() * 0.16F);
-            // Removed IMPACT: this was the extra heavy thud heard on every successful hit.
         }
-        return hit;
+    }
+
+    @Override public boolean doHurtTarget(Entity target) {
+        return super.doHurtTarget(target);
     }
 
     public boolean isPlayingAttackAnimation() { return this.entityData.get(ATTACK_ANIMATION_TICKS) > 0; }
@@ -135,7 +138,7 @@ public class WorldMonsterEntity extends Monster implements GeoEntity {
     @Override public MobType getMobType() { return MobType.UNDEAD; }
 
     @Override public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
-        controllers.add(new AnimationController<>(this, "main", 3, state -> {
+        controllers.add(new AnimationController<>(this, "main", 0, state -> {
             if (isPlayingAttackAnimation()) return state.setAndContinue(ATTACK);
             if (isChasing()) return state.setAndContinue(RUN);
             if (state.isMoving()) return state.setAndContinue(WALK);
