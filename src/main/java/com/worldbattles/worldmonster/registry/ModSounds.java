@@ -13,7 +13,6 @@ public final class ModSounds {
     public static final RegistryObject<SoundEvent> HURT_1 = register("entity.worldmonster.hurt_1");
     public static final RegistryObject<SoundEvent> HURT_2 = register("entity.worldmonster.hurt_2");
     public static final RegistryObject<SoundEvent> HURT_3 = register("entity.worldmonster.hurt_3");
-    public static final RegistryObject<SoundEvent> CRY = register("entity.worldmonster.cry");
     public static final RegistryObject<SoundEvent> ATTACK_1 = register("entity.worldmonster.attack_1");
     public static final RegistryObject<SoundEvent> ATTACK_2 = register("entity.worldmonster.attack_2");
     public static final RegistryObject<SoundEvent> IMPACT = register("entity.worldmonster.impact");
