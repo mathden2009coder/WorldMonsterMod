@@ -104,11 +104,11 @@ public class WorldMonsterEntity extends Monster implements GeoEntity {
                     boolean useGrowl2 = this.random.nextBoolean();
                     this.playSound(useGrowl2 ? ModSounds.GROWL_2.get() : ModSounds.GROWL_1.get(),
                             0.9F, 0.96F + this.random.nextFloat() * 0.08F);
-                    this.chaseSoundTicks = useGrowl2 ? 45 : 50;
+                    this.chaseSoundTicks = useGrowl2 ? 50 : 55;
                     this.playGrowlNext = false;
                 } else {
                     this.playSound(ModSounds.BREATHING.get(), 0.9F, 1.0F);
-                    this.chaseSoundTicks = 62;
+                    this.chaseSoundTicks = 68;
                     this.playGrowlNext = true;
                 }
             } else {
@@ -152,6 +152,8 @@ public class WorldMonsterEntity extends Monster implements GeoEntity {
     public boolean isChasing() { return this.entityData.get(CHASING); }
 
     @Override protected SoundEvent getAmbientSound() {
+        // Chase sounds are sequenced by tick(); suppress vanilla ambient playback to prevent overlap.
+        if (this.isChasing()) return null;
         return this.random.nextInt(4) == 0
                 ? (this.random.nextBoolean() ? ModSounds.GROWL_1.get() : ModSounds.GROWL_2.get())
                 : ModSounds.BREATHING.get();
