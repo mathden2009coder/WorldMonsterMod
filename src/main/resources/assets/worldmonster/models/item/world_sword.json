@@ -1,0 +1,9 @@
+{
+  "parent": "worldmonster:item/world_sword_1",
+  "overrides": [
+    {"predicate": {"worldmonster:level": 2.0}, "model": "worldmonster:item/world_sword_2"},
+    {"predicate": {"worldmonster:level": 3.0}, "model": "worldmonster:item/world_sword_3"},
+    {"predicate": {"worldmonster:level": 4.0}, "model": "worldmonster:item/world_sword_4"},
+    {"predicate": {"worldmonster:level": 5.0}, "model": "worldmonster:item/world_sword_5"}
+  ]
+}
