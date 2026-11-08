@@ -40,6 +40,8 @@ public class WorldMonsterEntity extends Monster implements GeoEntity {
     private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
     private LivingEntity pendingAttackTarget;
     private int pendingAttackTicks;
+    private int chaseSoundTicks;
+    private boolean playGrowlNext;
     private static final RawAnimation IDLE = RawAnimation.begin().thenLoop("animation.worldmonster.idle");
     private static final RawAnimation WALK = RawAnimation.begin().thenLoop("animation.worldmonster.walking");
     private static final RawAnimation RUN = RawAnimation.begin().thenLoop("animation.worldmonster.running");
@@ -93,6 +95,26 @@ public class WorldMonsterEntity extends Monster implements GeoEntity {
                     && this.distanceToSqr(this.getTarget()) > 3.5D
                     && this.getNavigation().isInProgress();
             this.entityData.set(CHASING, chasing);
+
+            // Chase soundtrack: breathing, then one random growl, repeated while pursuing.
+            if (chasing) {
+                if (this.chaseSoundTicks > 0) {
+                    this.chaseSoundTicks--;
+                } else if (this.playGrowlNext) {
+                    boolean useGrowl2 = this.random.nextBoolean();
+                    this.playSound(useGrowl2 ? ModSounds.GROWL_2.get() : ModSounds.GROWL_1.get(),
+                            0.9F, 0.96F + this.random.nextFloat() * 0.08F);
+                    this.chaseSoundTicks = useGrowl2 ? 45 : 50;
+                    this.playGrowlNext = false;
+                } else {
+                    this.playSound(ModSounds.BREATHING.get(), 0.9F, 1.0F);
+                    this.chaseSoundTicks = 62;
+                    this.playGrowlNext = true;
+                }
+            } else {
+                this.chaseSoundTicks = 0;
+                this.playGrowlNext = false;
+            }
 
             if (this.isAlive() && this.random.nextInt(240) == 0)
                 this.playSound(ModSounds.CRACKLING.get(), 0.9F, 0.9F + this.random.nextFloat() * 0.2F);
