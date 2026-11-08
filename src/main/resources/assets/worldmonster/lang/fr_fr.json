@@ -1,1 +1,20 @@
-{"entity.worldmonster.worldmonster":"Monstre du monde","item.worldmonster.worldmonster_spawn_egg":"Œuf d'apparition du monstre"}
+{
+  "entity.worldmonster.worldmonster": "Monstre du monde",
+  "item.worldmonster.worldmonster_spawn_egg": "Œuf d'apparition du monstre",
+  "item.worldmonster.world_sword": "World Sword",
+  "level.worldmonster.awakened": "Éveillée",
+  "level.worldmonster.reawakened": "Réveillée",
+  "level.worldmonster.corrupted": "Corrompue",
+  "level.worldmonster.absolute_void": "Néant absolu",
+  "level.worldmonster.max": "MAX",
+  "tooltip.worldmonster.world_sword.level": "Niveau : %s",
+  "tooltip.worldmonster.world_sword.progress": "Éliminations : %s / %s",
+  "tooltip.worldmonster.world_sword.remaining": "Éliminations restantes : %s",
+  "tooltip.worldmonster.world_sword.max": "Progression terminée — World Sword ultime",
+  "message.worldmonster.world_sword.level_up": "La World Sword évolue : %s !",
+  "message.worldmonster.spawn": "⚠ Une présence obscure vient de se manifester quelque part dans le monde...",
+  "message.worldmonster.defeated": "✦ Le World Monster a été vaincu ! Une World Sword a été laissée derrière lui...",
+  "key.worldmonster.world_sword_shockwave": "Onde de choc de la World Sword",
+  "key.categories.worldmonster": "World Monster",
+  "command.worldmonster.world_sword.given": "World Sword niveau %s donnée à %s."
+}
