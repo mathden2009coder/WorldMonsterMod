@@ -36,7 +36,7 @@ public final class WorldSwordEvents {
         if (event.getEntity() instanceof WorldMonsterEntity monster && !monster.level().isClientSide) {
             monster.spawnAtLocation(new ItemStack(ModItems.WORLD_SWORD.get()));
             if (monster.level() instanceof ServerLevel server)
-                server.getPlayerList().broadcastSystemMessage(Component.translatable("message.worldmonster.defeated")
+                server.getServer().getPlayerList().broadcastSystemMessage(Component.translatable("message.worldmonster.defeated")
                         .withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD), false);
         }
         if (event.getEntity() instanceof Player || !(event.getSource().getEntity() instanceof Player player)
