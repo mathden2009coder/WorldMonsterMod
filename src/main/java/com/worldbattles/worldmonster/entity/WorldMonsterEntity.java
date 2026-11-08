@@ -24,6 +24,8 @@ import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.fml.DistExecutor;
 import software.bernie.geckolib.animatable.GeoEntity;
 import software.bernie.geckolib.core.animatable.instance.AnimatableInstanceCache;
 import software.bernie.geckolib.core.animation.AnimatableManager;
@@ -33,6 +35,9 @@ import software.bernie.geckolib.util.GeckoLibUtil;
 
 public class WorldMonsterEntity extends Monster implements GeoEntity {
     private static final int ATTACK_WINDUP_TICKS = 9;
+    private static final int SOUND_BREATHING = 100, SOUND_GROWL_1 = 101, SOUND_GROWL_2 = 102,
+            SOUND_GROWL_3 = 103, SOUND_ATTACK_1 = 104, SOUND_ATTACK_2 = 105,
+            SOUND_HURT_1 = 106, SOUND_HURT_2 = 107, SOUND_HURT_3 = 108, SOUND_CRACKLING = 109;
     private static final EntityDataAccessor<Integer> ATTACK_ANIMATION_TICKS =
             SynchedEntityData.defineId(WorldMonsterEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Boolean> CHASING =
@@ -41,6 +46,7 @@ public class WorldMonsterEntity extends Monster implements GeoEntity {
     private LivingEntity pendingAttackTarget;
     private int pendingAttackTicks;
     private int chaseSoundTicks;
+    private int soundCooldownTicks;
     private boolean playGrowlNext;
     private static final RawAnimation IDLE = RawAnimation.begin().thenLoop("animation.worldmonster.idle");
     private static final RawAnimation WALK = RawAnimation.begin().thenLoop("animation.worldmonster.walking");
@@ -77,6 +83,7 @@ public class WorldMonsterEntity extends Monster implements GeoEntity {
     @Override public void tick() {
         super.tick();
         if (!this.level().isClientSide) {
+            if (this.soundCooldownTicks > 0) this.soundCooldownTicks--;
             if (this.entityData.get(ATTACK_ANIMATION_TICKS) > 0)
                 this.entityData.set(ATTACK_ANIMATION_TICKS, this.entityData.get(ATTACK_ANIMATION_TICKS) - 1);
 
@@ -90,25 +97,21 @@ public class WorldMonsterEntity extends Monster implements GeoEntity {
                 }
             }
 
-            boolean chasing = this.getTarget() != null
-                    && this.getTarget().isAlive()
-                    && this.distanceToSqr(this.getTarget()) > 3.5D
-                    && this.getNavigation().isInProgress();
+            boolean chasing = this.getTarget() != null && this.getTarget().isAlive()
+                    && this.distanceToSqr(this.getTarget()) > 3.5D && this.getNavigation().isInProgress();
             this.entityData.set(CHASING, chasing);
 
-            // Chase soundtrack: breathing, then one random growl, repeated while pursuing.
             if (chasing) {
-                if (this.chaseSoundTicks > 0) {
-                    this.chaseSoundTicks--;
-                } else if (this.playGrowlNext) {
-                    boolean useGrowl2 = this.random.nextBoolean();
-                    this.playSound(useGrowl2 ? ModSounds.GROWL_2.get() : ModSounds.GROWL_1.get(),
+                if (this.chaseSoundTicks > 0) this.chaseSoundTicks--;
+                else if (this.playGrowlNext) {
+                    boolean growl2 = this.random.nextBoolean();
+                    this.playSound(growl2 ? ModSounds.GROWL_2.get() : ModSounds.GROWL_1.get(),
                             0.9F, 0.96F + this.random.nextFloat() * 0.08F);
-                    this.chaseSoundTicks = useGrowl2 ? 50 : 55;
+                    this.chaseSoundTicks = growl2 ? 55 : 60;
                     this.playGrowlNext = false;
                 } else {
                     this.playSound(ModSounds.BREATHING.get(), 0.9F, 1.0F);
-                    this.chaseSoundTicks = 68;
+                    this.chaseSoundTicks = 75;
                     this.playGrowlNext = true;
                 }
             } else {
@@ -116,9 +119,57 @@ public class WorldMonsterEntity extends Monster implements GeoEntity {
                 this.playGrowlNext = false;
             }
 
-            if (this.isAlive() && this.random.nextInt(240) == 0)
-                this.playSound(ModSounds.CRACKLING.get(), 0.9F, 0.9F + this.random.nextFloat() * 0.2F);
+            // No independent random sound scheduler: all sounds pass through the same cooldown.
+            if (!chasing && this.isAlive() && this.random.nextInt(300) == 0)
+                this.playSound(this.random.nextBoolean() ? ModSounds.BREATHING.get() : ModSounds.GROWL_1.get(),
+                        0.85F, 0.95F + this.random.nextFloat() * 0.1F);
         }
+    }
+
+    private int soundEventFor(SoundEvent sound) {
+        if (sound == ModSounds.BREATHING.get()) return SOUND_BREATHING;
+        if (sound == ModSounds.GROWL_1.get()) return SOUND_GROWL_1;
+        if (sound == ModSounds.GROWL_2.get()) return SOUND_GROWL_2;
+        if (sound == ModSounds.GROWL_3.get()) return SOUND_GROWL_3;
+        if (sound == ModSounds.ATTACK_1.get()) return SOUND_ATTACK_1;
+        if (sound == ModSounds.ATTACK_2.get()) return SOUND_ATTACK_2;
+        if (sound == ModSounds.HURT_1.get()) return SOUND_HURT_1;
+        if (sound == ModSounds.HURT_2.get()) return SOUND_HURT_2;
+        if (sound == ModSounds.HURT_3.get()) return SOUND_HURT_3;
+        if (sound == ModSounds.CRACKLING.get()) return SOUND_CRACKLING;
+        return -1;
+    }
+
+    private int soundLengthTicks(int event) {
+        return switch (event) {
+            case SOUND_BREATHING -> 64; case SOUND_GROWL_1 -> 52; case SOUND_GROWL_2 -> 48;
+            case SOUND_GROWL_3 -> 32; case SOUND_ATTACK_1 -> 10; case SOUND_ATTACK_2 -> 15;
+            case SOUND_HURT_1, SOUND_HURT_2, SOUND_HURT_3 -> 9; case SOUND_CRACKLING -> 80;
+            default -> 0;
+        };
+    }
+
+    /** Route custom sounds through entity events so the client can keep their source attached to this mob. */
+    @Override public void playSound(SoundEvent sound, float volume, float pitch) {
+        if (!this.level().isClientSide) {
+            int event = soundEventFor(sound);
+            if (event >= 0) {
+                if (this.soundCooldownTicks > 0) return;
+                this.soundCooldownTicks = soundLengthTicks(event) + 3;
+                this.level().broadcastEntityEvent(this, (byte) event);
+                return;
+            }
+        }
+        super.playSound(sound, volume, pitch);
+    }
+
+    @Override public void handleEntityEvent(byte id) {
+        if (id >= SOUND_BREATHING && id <= SOUND_CRACKLING) {
+            DistExecutor.unsafeRunWhenOn(Dist.CLIENT,
+                    () -> () -> com.worldbattles.worldmonster.client.ClientMonsterSounds.play(this, id));
+            return;
+        }
+        super.handleEntityEvent(id);
     }
 
     private boolean isWithinMeleeReach(LivingEntity victim) {
@@ -126,20 +177,15 @@ public class WorldMonsterEntity extends Monster implements GeoEntity {
         return this.distanceToSqr(victim) <= reach * reach + victim.getBbWidth();
     }
 
-    /** Vanilla melee goal calls this at the start of its attack; damage is applied at the animation's impact frame. */
     @Override public boolean doHurtTarget(Entity target) {
-        if (this.level().isClientSide || !(target instanceof LivingEntity victim))
+        if (this.level().isClientSide || !(target instanceof LivingEntity victim) || this.pendingAttackTicks > 0)
             return false;
-        if (this.pendingAttackTicks > 0)
-            return false;
-
         this.startAttackAnimation();
         this.pendingAttackTarget = victim;
         this.pendingAttackTicks = ATTACK_WINDUP_TICKS;
         return true;
     }
 
-    /** Starts the attack animation and sound immediately, before the delayed damage. */
     public void startAttackAnimation() {
         if (!this.level().isClientSide) {
             this.entityData.set(ATTACK_ANIMATION_TICKS, 15);
@@ -151,18 +197,11 @@ public class WorldMonsterEntity extends Monster implements GeoEntity {
     public boolean isPlayingAttackAnimation() { return this.entityData.get(ATTACK_ANIMATION_TICKS) > 0; }
     public boolean isChasing() { return this.entityData.get(CHASING); }
 
-    @Override protected SoundEvent getAmbientSound() {
-        // Chase sounds are sequenced by tick(); suppress vanilla ambient playback to prevent overlap.
-        if (this.isChasing()) return null;
-        return this.random.nextInt(4) == 0
-                ? (this.random.nextBoolean() ? ModSounds.GROWL_1.get() : ModSounds.GROWL_2.get())
-                : ModSounds.BREATHING.get();
-    }
+    @Override protected SoundEvent getAmbientSound() { return null; }
 
     @Override protected SoundEvent getHurtSound(DamageSource source) {
         return switch (this.random.nextInt(3)) {
-            case 0 -> ModSounds.HURT_1.get();
-            case 1 -> ModSounds.HURT_2.get();
+            case 0 -> ModSounds.HURT_1.get(); case 1 -> ModSounds.HURT_2.get();
             default -> ModSounds.HURT_3.get();
         };
     }
@@ -174,8 +213,8 @@ public class WorldMonsterEntity extends Monster implements GeoEntity {
         if (!this.level().isClientSide && this.level() instanceof ServerLevel server) {
             server.sendParticles(ParticleTypes.SOUL, getX(), getY() + getBbHeight() * 0.5D, getZ(),
                     28, 0.55D, 0.65D, 0.55D, 0.035D);
-            server.sendParticles(ParticleTypes.LARGE_SMOKE, getX(), getY() + 0.4D, getZ(),
-                    18, 0.45D, 0.35D, 0.45D, 0.02D);
+            server.sendParticles(ParticleTypes.LARGE_SMOKE, getX(), getY() + 0.4D, getZ(), 18,
+                    0.45D, 0.35D, 0.45D, 0.02D);
         }
     }
 
