@@ -1,1 +1,20 @@
-{"entity.worldmonster.worldmonster":"World Monster","item.worldmonster.worldmonster_spawn_egg":"World Monster Spawn Egg"}
+{
+  "entity.worldmonster.worldmonster": "World Monster",
+  "item.worldmonster.worldmonster_spawn_egg": "World Monster Spawn Egg",
+  "item.worldmonster.world_sword": "World Sword",
+  "level.worldmonster.awakened": "Awakened",
+  "level.worldmonster.reawakened": "Reawakened",
+  "level.worldmonster.corrupted": "Corrupted",
+  "level.worldmonster.absolute_void": "Absolute Void",
+  "level.worldmonster.max": "MAX",
+  "tooltip.worldmonster.world_sword.level": "Level: %s",
+  "tooltip.worldmonster.world_sword.progress": "Kills: %s / %s",
+  "tooltip.worldmonster.world_sword.remaining": "Kills remaining: %s",
+  "tooltip.worldmonster.world_sword.max": "Progress complete — ultimate World Sword",
+  "message.worldmonster.world_sword.level_up": "The World Sword evolves: %s!",
+  "message.worldmonster.spawn": "⚠ A dark presence has manifested somewhere in the world...",
+  "message.worldmonster.defeated": "✦ The World Monster has been defeated! A World Sword was left behind...",
+  "key.worldmonster.world_sword_shockwave": "World Sword Shockwave",
+  "key.categories.worldmonster": "World Monster",
+  "command.worldmonster.world_sword.given": "Gave a level %s World Sword to %s."
+}
