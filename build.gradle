@@ -33,6 +33,22 @@ dependencies {
     minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
     implementation fg.deobf("software.bernie.geckolib:geckolib-forge-${minecraft_version}:${geckolib_version}")
 }
+
+// The five original Blockbench PNGs are stored as a small source archive to
+// keep their binary bytes intact in Git. Extract them into the resource set
+// before processResources so the mod JAR receives the normal assets paths.
+def generatedWorldSwordResources = layout.buildDirectory.dir('generated/resources/worldSword')
+sourceSets.main.resources.srcDir(generatedWorldSwordResources)
+
+tasks.register('extractWorldSwordTextures', Sync) {
+    from zipTree(layout.projectDirectory.file('world_sword_textures.zip'))
+    into generatedWorldSwordResources
+}
+
+tasks.named('processResources') {
+    dependsOn tasks.named('extractWorldSwordTextures')
+}
+
 processResources {
     inputs.property 'mod_id', mod_id
     inputs.property 'mod_name', mod_name
